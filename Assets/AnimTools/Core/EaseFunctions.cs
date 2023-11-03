@@ -28,15 +28,11 @@ namespace AnimTools.Curves
                 (1 - 4 * Mathf.Pow(1 - p, 3)) * a;
         }
 
+        // returns the y value with p acting as the x value
         public static float Bezier(BezierCurves.BezierPoints points, float p)
         {
-            return 0;
-            // TODO - function is incorrect; will need to get the y-value of the curve at a certain x-value
-            // not a trivial thing to do
-            //return 0 +
-            //    3 * Mathf.Pow(1 - p, 2) * p * controlPoints.x +
-            //    3 * (1 - p) * p * p * controlPoints.y +
-            //    p * p * p;
+            float t = BezierCurves.SolveForT(points, p);
+            return BezierCurves.SolveForY(points, t);
         }
     }
 }
