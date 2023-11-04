@@ -85,6 +85,23 @@ namespace AnimTools
         }
         #endregion
 
+        //#region Graphs
+        //public void Draw2DGraph(Vector3 origin, float extent, float gridSpacing, float p)
+        //{
+        //    float axisP = Mathf.Clamp01(2 * p);
+        //    DrawArrow(origin, origin + new Vector3(extent, 0f, 0f), axisP);
+        //    DrawArrow(origin, origin + new Vector3(0f, extent, 0f), axisP);
+        //    for (int i = 1; i <= extent / gridSpacing; i++)
+        //    {
+        //        float distFromOrigin = i * gridSpacing;
+        //        float pAlongLine = distFromOrigin / extent;
+        //        float lineP = Mathf.Clamp01(2*p - pAlongLine);
+        //        DrawLine(new Vector3(origin.x + distFromOrigin, origin.y, origin.z), new Vector3(origin.x + distFromOrigin, origin.y + extent, origin.z), lineP);
+        //        DrawLine(new Vector3(origin.x, origin.y + distFromOrigin, origin.z), new Vector3(origin.x + extent, origin.y + distFromOrigin, origin.z), lineP);
+        //    }
+        //}
+        //#endregion
+
     }
 }
 
