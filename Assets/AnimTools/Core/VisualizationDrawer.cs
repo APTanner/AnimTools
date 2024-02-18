@@ -46,8 +46,8 @@ namespace AnimTools
         }
 
 
-        private PriorityQueue<IShape> _dashedPq = new PriorityQueue<IShape>();
-        private PriorityQueue<IShape> _normalPq = new PriorityQueue<IShape>();
+        private List<IShape> m_shapes = new List<IShape>();
+        private List<IDashedShape> m_dashedShapes = new List<IDashedShape>();
 
         public override void DrawShapes(Camera cam)
         {
@@ -56,44 +56,75 @@ namespace AnimTools
             {
                 using (Draw.DashedScope())
                 {
-                    // enum is less than or equal to the last dashed object (therefore the current object is dashed)
-                    while (_dashedPq.Count > 0)
+                    foreach (IDashedShape shape in m_dashedShapes)
                     {
-                        IShape shape = _dashedPq.Dequeue();
+                        ShapeStyle shapeStyle = shape.Style;
+                        Draw.BlendMode = shapeStyle.BlendMode;
+                        Draw.Color = shapeStyle.Color;
+                        Draw.Thickness = shapeStyle.Thickness;
+                        Draw.ThicknessSpace = shapeStyle.ThicknessSpace;
+
                         switch (shape.Type)
                         {
-                            case ShapeType.DashedLine:
+                            case DashedShapeType.DashedLine:
                                 DashedLine line = (DashedLine)shape;
                                 Draw.DashSize = line.DashStyle.DashSize;
                                 Draw.DashSpacing = line.DashStyle.DashSpacing;
                                 Draw.DashSpace = line.DashStyle.DashSpace;
                                 Draw.DashType = line.DashStyle.DashType;
-                                Draw.Line(line.Start, line.End, 
-                                    line.LineStyle.Width, line.LineStyle.LineEndCap, 
+                                if (line.LineStyle.StartColor == Color.clear)
+                                {
+                                    Draw.Line(line.Start, line.End, line.LineStyle.LineEndCap);
+                                }
+                                else
+                                {
+                                    Draw.Line(line.Start, line.End, line.LineStyle.LineEndCap,
                                     line.LineStyle.StartColor, line.LineStyle.EndColor);
+                                }
                                 break;
-                            case ShapeType.DashedDisc:
+                            case DashedShapeType.DashedDisc:
                                 // TODO
                                 break;
                             default:
                                 throw new System.Exception("Invalid ShapeType");
+
                         }
                     }
+                    m_dashedShapes.Clear();
                 }
-                while (_normalPq.Count > 0)
+                
+                foreach(IShape shape in m_shapes)
                 {
-                    IShape shape = _normalPq.Dequeue();
+                    ShapeStyle shapeStyle = shape.Style;
+                    Draw.BlendMode = shapeStyle.BlendMode;
+                    Draw.Color = shapeStyle.Color;
+                    Draw.Thickness = shapeStyle.Thickness;
+                    Draw.ThicknessSpace = shapeStyle.ThicknessSpace;
+
                     switch (shape.Type)
                     {
                         case ShapeType.Line:
                             ShapeData.Line line = (ShapeData.Line)shape;
-                            Draw.Line(line.Start, line.End,
-                                line.LineStyle.Width, line.LineStyle.LineEndCap,
+                            if (line.LineStyle.StartColor == Color.clear)
+                            {
+                                Draw.Line(line.Start, line.End, line.LineStyle.LineEndCap);
+                            }
+                            else
+                            {
+                                Draw.Line(line.Start, line.End, line.LineStyle.LineEndCap,
                                 line.LineStyle.StartColor, line.LineStyle.EndColor);
+                            }
                             break;
                         case ShapeType.Disc:
                             ShapeData.Disc disc = (ShapeData.Disc)shape;
-                            Draw.Disc(disc.Position, disc.Normal, disc.Radius, disc.DiscStyle.Colors);
+                            if (disc.DiscStyle.UsingColors)
+                            {
+                                Draw.Disc(disc.Position, disc.Normal, disc.Radius, disc.DiscStyle.Colors);
+                            }
+                            else
+                            {
+                                Draw.Disc(disc.Position, disc.Normal, disc.Radius);
+                            }
                             break;
                         case ShapeType.Triangle:
                             ShapeData.Triangle triangle = (ShapeData.Triangle)shape;
@@ -103,26 +134,45 @@ namespace AnimTools
                                 positions.B,
                                 positions.C,
                                 triangle.TriangleStyle.Roundness,
-                                triangle.TriangleStyle.Color
+                                Color.white
                             );
+                            break;
+                        case ShapeType.Rectangle:
+                            ShapeData.Rectangle rectangle = (ShapeData.Rectangle)shape;
+                            Draw.Rectangle(
+                                rectangle.Position,
+                                rectangle.Normal,
+                                rectangle.Size.x, 
+                                rectangle.Size.y,
+                                rectangle.RectangleStyle.Roundness,
+                                rectangle.ShapeStyle.Color
+                                );
+                            if (rectangle.RectangleStyle.BorderThickness == 0) { break; }
+                            Draw.RectangleBorder(
+                                rectangle.Position, 
+                                rectangle.Normal, 
+                                rectangle.Size,
+                                rectangle.RectangleStyle.BorderThickness,
+                                rectangle.RectangleStyle.Roundness,
+                                rectangle.RectangleStyle.BorderColor
+                                );
                             break;
                         default:
                             throw new System.Exception("Invalid ShapeType");
                     }
                 }
+                m_shapes.Clear();
             }
         }
 
-        public void Submit(IShape shape)
+        public void AddShape(IShape shape)
         {
-            if (shape.Type <= ShapeInfo.LastDashedShape)
-            {
-                _dashedPq.Enqueue(shape);
-            }
-            else
-            {
-                _normalPq.Enqueue(shape);
-            }
+           m_shapes.Add(shape);
+        }
+
+        public void AddDashedShape(IDashedShape shape)
+        {
+            m_dashedShapes.Add(shape);
         }
     }
 }

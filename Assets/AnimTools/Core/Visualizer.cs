@@ -7,35 +7,20 @@ using System.Drawing;
 
 namespace AnimTools
 {
-    public sealed class Visualizer
+    public static class Visualizer
     {
-        private static Visualizer _instance;
-        public static Visualizer Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new Visualizer();
-                }
-                return _instance;
-            }
-        }
-        // so they can't be created
-        private Visualizer() 
-        {
-        }
+        public static ShapeStyle ShapeStyle { get; set; } = new ShapeStyle();
 
         #region Lines
-        public LineStyle LineStyle { get; set; } = LineStyle.Default;
-        public void DrawLine(Vector3 start, Vector3 end)
+        public static LineStyle LineStyle { get; set; } = new LineStyle();
+        public static void DrawLine(Vector3 start, Vector3 end)
         {
-            ShapeData.Line line = ShapeData.Line.Simple(start, end);
-            line.LineStyle = LineStyle;
-            VisualizationDrawer.Instance.Submit(line);
+            ShapeData.Line line = 
+                new ShapeData.Line(start, end, new ShapeStyle(ShapeStyle), new LineStyle(LineStyle));
+            VisualizationDrawer.Instance.AddShape(line);
         }
 
-        public void DrawLine(Vector3 start, Vector3 end, float p)
+        public static void DrawLine(Vector3 start, Vector3 end, float p)
         {
             Vector3 dir = end - start;
             end = start + dir * p;
@@ -43,48 +28,77 @@ namespace AnimTools
         }
         #endregion
 
-        #region LineDerivatives
-        public void DrawArrow(Vector3 start, Vector3 end, float arrowSize, float p)
+        #region Triangle
+        public static TriangleStyle TriangleStyle { get; set; } = new TriangleStyle();
+        public static void DrawTriangle(Vector3 position, Vector3 heading, float size)
         {
-            arrowSize *= LineStyle.Width;
+            VisualizationDrawer.Instance.AddShape(
+                new ShapeData.Triangle(position, heading, size, new ShapeStyle(ShapeStyle), new TriangleStyle(TriangleStyle))
+            );
+        }
+
+        #endregion
+
+        #region LineDerivatives
+        public static void DrawArrow(Vector3 start, Vector3 end, float arrowSize, float p)
+        {
+            arrowSize *= ShapeStyle.Thickness;
             Vector3 dir = end - start;
             Vector3 arrowTipPos = start + dir * p;
             float currentArrowSize = arrowSize * Mathf.Clamp01(p*9); // first 10% of the arrow's life the arrowhead grows to full size
             Vector3 n_dir = dir.normalized;
             Vector3 arrowPos = arrowTipPos + currentArrowSize * -n_dir; // arrowSize is the height (in meters) of the arrowhead at max size
-                                                         // triangle's origin is the bottom middle of the triangle
-                                                         // if we want the arrow's tip to be right at the end, we have to go
-                                                         // back the height of the arrow to find its origin
-            ShapeData.Triangle arrowHead = ShapeData.Triangle.Simple(arrowPos, n_dir, currentArrowSize);
-            arrowHead.TriangleStyle = TriangleStyle.SingleColor(LineStyle.EndColor);
-            VisualizationDrawer.Instance.Submit(arrowHead);
+                                                                        // triangle's origin is the bottom middle of the triangle
+                                                                        // if we want the arrow's tip to be right at the end, we have to go
+                                                                        // back the height of the arrow to find its origin
+            ShapeData.Triangle arrowHead =
+                new ShapeData.Triangle(arrowPos, n_dir, currentArrowSize, new ShapeStyle(ShapeStyle), new TriangleStyle(TriangleStyle));
+            
+            if (LineStyle.EndColor != UnityEngine.Color.clear)
+            {
+                arrowHead.ShapeStyle.Color = LineStyle.EndColor;
+            }
+
+            VisualizationDrawer.Instance.AddShape(arrowHead);
             DrawLine(start, arrowPos);
         }
-        public void DrawArrow(Vector3 start, Vector3 end, float p)
+        public static void DrawArrow(Vector3 start, Vector3 end, float p)
         {
             DrawArrow(start, end, 3, p);
         }
-        public void DrawArrow(Vector3 start, Vector3 end)
+        public static void DrawArrow(Vector3 start, Vector3 end)
         {
             DrawArrow(start, end, 1, 1);
         }
         #endregion
 
         #region Discs
-        public void DrawPoint(Vector3 pos, float radius, UnityEngine.Color color)
+        public static DiscStyle DiscStyle { get; set; } = new DiscStyle();
+        public static void DrawPoint(Vector3 pos, float radius)
         {
-            ShapeData.Disc disc = ShapeData.Disc.Simple(pos, radius);
-            DiscColors colors = color;
-            disc.DiscStyle.Colors = colors;
-            VisualizationDrawer.Instance.Submit(disc);
-        }
-        public void DrawPoint(Vector3 pos, float radius)
-        {
-            ShapeData.Disc disc = ShapeData.Disc.Simple(pos, radius);
-            VisualizationDrawer.Instance.Submit(disc);
+            ShapeData.Disc disc =
+                new ShapeData.Disc(pos, radius, -Camera.main.transform.forward, new ShapeStyle(ShapeStyle), new DiscStyle(DiscStyle));
+            VisualizationDrawer.Instance.AddShape(disc);
         }
         #endregion
 
+        #region Rectangles
+        public static RectangleStyle RectangleStyle { get; set; } = new RectangleStyle();
+        public static void DrawRectangle(Vector3 pos, Vector2 size, float p)
+        {
+            DrawRectangle(pos, size, Vector3.forward, p);
+        }
+
+        public static void DrawRectangle(Vector3 pos, Vector2 size, Vector3 normal, float p)
+        {
+            RectangleStyle rectStyle = new RectangleStyle(RectangleStyle);
+            rectStyle.BorderThickness *= p;
+            ShapeData.Rectangle rectangle =
+                new ShapeData.Rectangle(pos, normal, size * p, new ShapeStyle(ShapeStyle), rectStyle);
+            VisualizationDrawer.Instance.AddShape(rectangle);
+        }
+
+        #endregion
         //#region Graphs
         //public void Draw2DGraph(Vector3 origin, float extent, float gridSpacing, float p)
         //{

@@ -3,16 +3,15 @@ using Shapes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using UnityEngine;
 using static UnityEditor.PlayerSettings;
 
 namespace AnimTools.ShapeData
 {
-    public enum ShapeType : int
+    public enum ShapeType
     {
         None = 0,
-        DashedLine,
-        DashedDisc,
         Line,
         Polyline,
         Disc,
@@ -25,108 +24,186 @@ namespace AnimTools.ShapeData
         Cone,
         Cuboid
     }
-    public static class ShapeInfo
+
+    public enum DashedShapeType
     {
-        public const ShapeType LastDashedShape = ShapeType.DashedDisc;
+        None = 0,
+        DashedLine,
+        DashedDisc,
     }
 
-    public interface IShape : IComparable<IShape>
+    public interface IShape
     {
         public ShapeType Type { get; }
+        public ShapeStyle Style { get; }
     }
 
-    public struct DashStyle
+    public interface IDashedShape
+    {
+        public DashedShapeType Type { get; }
+        public ShapeStyle Style { get; }
+    }
+
+    public class ShapeStyle
+    {
+        public ShapesBlendMode BlendMode;
+        public Color Color;
+        public float Thickness;
+        public ThicknessSpace ThicknessSpace;
+
+        public ShapeStyle()
+        {
+            Reset();
+        }
+        public ShapeStyle(ShapeStyle other)
+        {
+            BlendMode = other.BlendMode;
+            Color = other.Color;
+            Thickness = other.Thickness;
+            ThicknessSpace = other.ThicknessSpace;
+        }
+
+        public void Reset()
+        {
+            BlendMode = ShapesBlendMode.Transparent;
+            Color = Color.white;
+            Thickness = 0.1f;
+            ThicknessSpace = ThicknessSpace.Meters;
+        }
+    }
+
+    public class DashStyle
     {
         public float DashSize;
         public float DashSpacing;
         public DashSpace DashSpace;
         public DashType DashType;
 
-        public DashStyle(float dashSize, float dashSpacing, DashSpace dashSpace, DashType dashType)
+        public DashStyle()
+        {
+            Reset();
+        }
+        public DashStyle(DashStyle other)
+        {
+            DashSize = other.DashSize;
+            DashSpacing = other.DashSpacing;
+            DashSpace = other.DashSpace;
+            DashType = other.DashType;
+        }
+
+        public void Simple(float dashSize, float dashSpacing)
         {
             DashSize = dashSize;
             DashSpacing = dashSpacing;
-            DashSpace = dashSpace;
-            DashType = dashType;
         }
 
-        public static DashStyle Default => new DashStyle(1, 1, DashSpace.Meters, DashType.Basic);
-        public static DashStyle Simple(float dashSize, float dashSpacing) => new DashStyle(dashSize, dashSpacing, DashSpace.Meters, DashType.Basic);
-        
+        public void Reset()
+        {
+            DashSize = 1;
+            DashSpacing = 1;
+            DashSpace = DashSpace.Meters;
+            DashType = DashType.Basic;
+        }
     }
 
-    public struct LineStyle
+    public class LineStyle
     {
-        public float Width;
         public Color StartColor;
         public Color EndColor;
         public LineEndCap LineEndCap;
-        public ThicknessSpace ThicknessSpace;
 
-        public LineStyle(float width, Color startColor, Color endColor, LineEndCap lineEndCap, ThicknessSpace thicknessSpace)
+
+        public LineStyle()
         {
-            Width = width;
-            StartColor = startColor;
-            EndColor = endColor;
-            LineEndCap = lineEndCap;
-            ThicknessSpace = thicknessSpace;
+            Reset();
+        }
+        public LineStyle(LineStyle other)
+        {
+            StartColor = other.StartColor;
+            EndColor = other.EndColor;
+            LineEndCap = other.LineEndCap;
         }
 
-        public static LineStyle Default => SimpleColored(0.1f, Color.white, Color.white);
-        public static LineStyle SimpleColored(float width, Color startColor, Color endColor) => new LineStyle(width, startColor, endColor, LineEndCap.Round, ThicknessSpace.Meters);
-        public static LineStyle Simple(float width) => SimpleColored(width, Color.white, Color.white);
-        public static implicit operator LineStyle(Color color) => SimpleColored(0.1f, color, color);
+        public void SimpleColored(Color startColor, Color endColor)
+        {
+            StartColor = startColor;
+            EndColor = endColor;
+        }
+
+        public void Reset()
+        {
+            StartColor = Color.clear;
+            EndColor = Color.clear;
+            LineEndCap = LineEndCap.Round;
+        }
     }
 
     public struct Line : IShape
     {
         public Vector3 Start;
         public Vector3 End;
+        public ShapeStyle ShapeStyle;
         public LineStyle LineStyle;
 
-        public Line(Vector3 start, Vector3 end, LineStyle lineStyle)
+        public Line(Vector3 start, Vector3 end, ShapeStyle shapeStyle, LineStyle lineStyle)
         {
             Start = start;
             End = end;
+            ShapeStyle = shapeStyle;
             LineStyle = lineStyle;
         }
-        public static Line Simple(Vector3 start, Vector3 end) => new Line(start, end, LineStyle.Default);
         public ShapeType Type => ShapeType.Line;
-        public int CompareTo(IShape other)
-        {
-            if (Type == other.Type) return 0;
-            return (int)Type < (int)other.Type ? 1 : -1;
-        }
+        public ShapeStyle Style => ShapeStyle;
     }
 
-    public struct DashedLine : IShape
+    public struct DashedLine : IDashedShape
     {
         public Vector3 Start;
         public Vector3 End;
+        public ShapeStyle ShapeStyle;
         public LineStyle LineStyle;
         public DashStyle DashStyle;
-        public DashedLine(Vector3 start, Vector3 end, LineStyle lineStyle, DashStyle dashStyle)
+        public DashedLine(Vector3 start, Vector3 end, ShapeStyle shapeStyle, LineStyle lineStyle, DashStyle dashStyle)
         {
             Start = start;
             End = end;
+            ShapeStyle = shapeStyle;
             LineStyle = lineStyle;
             DashStyle = dashStyle;
         }
-        public static DashedLine Simple(Vector3 start, Vector3 end) => new DashedLine(start, end, LineStyle.Default, DashStyle.Default);
-        public ShapeType Type => ShapeType.DashedLine;
-        public int CompareTo(IShape other)
-        {
-            if (Type == other.Type) return 0;
-            return (int)Type < (int)other.Type ? 1 : -1;
-        }
+        public DashedShapeType Type => DashedShapeType.DashedLine;
+        public ShapeStyle Style => ShapeStyle;
+
     }
 
-    public struct DiscStyle
+    public class DiscStyle
     {
-        public DiscColors Colors;
-        public DiscStyle(DiscColors colors) {  Colors = colors; }
-        public static DiscStyle Default => SingleColor(Color.white);
-        public static DiscStyle SingleColor(Color color) => new DiscStyle(color);
+        public DiscColors Colors { get; private set; }
+        public bool UsingColors;
+        public DiscType DiscType;
+
+        public void SetDiscColors(DiscColors colors)
+        {
+            Colors = colors;
+            UsingColors = true;
+        }
+
+        public DiscStyle() 
+        {
+            Reset();
+        }
+        public DiscStyle(DiscStyle other)
+        {
+            Colors = other.Colors;
+            DiscType = other.DiscType;
+        }
+
+        public void Reset()
+        {
+            UsingColors = false;
+            Colors = Color.clear;
+            DiscType = DiscType.Disc;
+        }
     }
 
     public struct Disc : IShape
@@ -134,48 +211,54 @@ namespace AnimTools.ShapeData
         public Vector3 Position;
         public float Radius;
         public Vector3 Normal;
+        public ShapeStyle ShapeStyle;
         public DiscStyle DiscStyle;
-        public Disc(Vector3 pos, float radius, Vector3 normal, DiscStyle discStyle)
+        public Disc(Vector3 pos, float radius, Vector3 normal, ShapeStyle shapeStyle, DiscStyle discStyle)
         {
             Position = pos;
             Radius = radius;
             Normal = normal;
+            ShapeStyle = shapeStyle;
             DiscStyle = discStyle;
         }
 
+
         public ShapeType Type => ShapeType.Disc;
+        public ShapeStyle Style => ShapeStyle;
 
-        public static Disc Simple(Vector3 position, float radius) => SimpleFacing(position, radius, (Camera.main.transform.position - position).normalized);
-        public static Disc SimpleFacing(Vector3 position, float radius, Vector3 normal) => new Disc(position, radius, normal, DiscStyle.Default);
-        public static Disc SingleColor(Vector3 position, float radius, Color color) => new Disc(position, radius, (Camera.main.transform.position - position).normalized, DiscStyle.SingleColor(color));
 
-        public int CompareTo(IShape other)
+        public void SetNormal(Vector3 normal)
         {
-            if (Type == other.Type) return 0;
-            return (int)Type < (int)other.Type ? 1 : -1;
+            Normal = normal;
         }
     }
 
-    public struct TriangleStyle
+    public class TriangleStyle
     {
         public Vector3 LocalA;
         public Vector3 LocalB;
         public Vector3 LocalC;
-        public Color Color;
         public float Roundness;
 
-        public TriangleStyle(Vector3 a, Vector3 b, Vector3 c, Color color, float roundness)
+        public TriangleStyle()
         {
-            LocalA = a;
-            LocalB = b;
-            LocalC = c;
-            Color = color;
-            Roundness = roundness;
+            Reset();
+        }
+        public TriangleStyle(TriangleStyle other)
+        {
+            LocalA = other.LocalA;
+            LocalB = other.LocalB;
+            LocalC = other.LocalC;
+            Roundness = other.Roundness;
         }
 
-        public static TriangleStyle Default => SingleColor(Color.white);
-        public static TriangleStyle Simple(Color color, float roundness) => new TriangleStyle(new Vector3(0f, 1f, 0f), new Vector3(-0.57735f, 0f, 0f), new Vector3(0.57735f, 0f, 0f), color, roundness);
-        public static TriangleStyle SingleColor(Color color) => Simple(color, 0.2f);
+        public void Reset()
+        {
+            LocalA = new Vector3(0f, 1f, 0f);
+            LocalB = new Vector3(-0.57735f, 0f, 0f);
+            LocalC = new Vector3(0.57735f, 0f, 0f);
+            Roundness = 0.2f;
+        }
     }
 
     public struct Triangle : IShape
@@ -183,27 +266,20 @@ namespace AnimTools.ShapeData
         public Vector3 Position;
         public Vector3 u_Heading;
         public float Size;
+        public ShapeStyle ShapeStyle;
         public TriangleStyle TriangleStyle;
-        public Triangle(Vector3 position, Vector3 heading, float size, TriangleStyle triangleStyle)
+        public Triangle(Vector3 position, Vector3 heading, float size, ShapeStyle shapeStyle, TriangleStyle triangleStyle)
         {
             Position = position;
             u_Heading = heading;
             Size = size;
+            ShapeStyle = shapeStyle;
             TriangleStyle = triangleStyle;
         }
 
         public ShapeType Type => ShapeType.Triangle;
+        public ShapeStyle Style => ShapeStyle;
 
-        public static Triangle Simple(Vector3 position, Vector3 u_heading, float size) => SimpleColored(position, u_heading, size, Color.white);
-        public static Triangle SimpleColored(Vector3 position, Vector3 u_heading, float size, Color color) => new Triangle(
-            position, u_heading, size, TriangleStyle.SingleColor(color)
-        );
-
-        public int CompareTo(IShape other)
-        {
-            if (Type == other.Type) return 0;
-            return (int)Type < (int)other.Type ? 1 : -1;
-        }
 
         public readonly (Vector3 A, Vector3 B, Vector3 C) GetWorldSpaceVertexPositions()
         {
@@ -226,5 +302,50 @@ namespace AnimTools.ShapeData
                 C: Position + finalRotation * TriangleStyle.LocalC * Size
             );
         }
+    }
+
+    public class RectangleStyle
+    {
+        public float BorderThickness;
+        public Color BorderColor;
+        public float Roundness;
+
+        public RectangleStyle() { Reset(); }
+
+        public RectangleStyle(RectangleStyle other)
+        {
+            BorderColor = other.BorderColor;
+            BorderThickness = other.BorderThickness;
+            Roundness = other.Roundness;
+        }
+
+        public void Reset()
+        {
+            BorderThickness = 0;
+            BorderColor = Color.clear;
+            Roundness = 0;
+        }
+    }
+
+    public struct Rectangle : IShape
+    {
+        public ShapeStyle ShapeStyle;
+        public RectangleStyle RectangleStyle;
+
+        public Vector3 Position;
+        public Vector3 Normal;
+        public Vector2 Size;
+
+        public Rectangle(Vector3 position, Vector3 normal, Vector2 size, ShapeStyle shapeStyle, RectangleStyle rectangleStyle)
+        {
+            Position = position;
+            Normal = normal;
+            Size = size;
+            ShapeStyle = shapeStyle;
+            RectangleStyle = rectangleStyle;
+        }
+
+        public ShapeType Type => ShapeType.Rectangle;
+        public ShapeStyle Style => ShapeStyle;
     }
 }
